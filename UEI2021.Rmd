@@ -1,0 +1,677 @@
+# Introduction
+
+# Set Up
+```{r}
+#load useful packages
+library(tidyverse)
+library(broom)
+#set working directory
+setwd("~/R/UEI2021")
+#load data
+outcomes <- read_csv("FOTtask.csv")
+demog <- read_csv("DEMOGtask - DEMOGtask.csv")
+```
+
+# 1. Describe the study population and their outcomes (on track, test scores, and graduation) based on the data available to you using tables or figures and write a paragraph or two describing the population, referencing your tables or figures.
+
+## Race and Ethnicity
+Note: Although I have written code for all 5 racial/ethnic categories, upon looking closely at the data, I found that none of the students are Native American or Alaskan Native.
+```{r}
+#create a data frame that counts how many students are of each race/ethnic category
+race <- demog %>%
+  group_by(racecat) %>%
+  summarize(count = n())
+#clean up the names for table
+race1 <- race %>%
+  mutate(
+  racecat = recode(
+    racecat,
+    "1" = "White",
+    "2" = "African American",
+    "3" = "Native American/Alaskan Native",
+    "4" = "Asian/Pacfic Islander",
+    "5" = "Latino"
+  )
+  )
+  
+#make table
+knitr::kable(race1, caption = "Demographics: Race and Ethnicity", col.names = c("Race/Ethnicity", "Number of Students"))
+```
+
+Most of the students in this study (78.8%) are African American. 17.4% are Latino, 3% are white, and 0.8% are Asian/Pacific Islander. Thus, the overwhelming majority of these students are people of color.
+
+## Gender
+```{r}
+#create a data frame that counts how many students are boys and how many are girls
+sex <- demog %>%
+  group_by(gender) %>%
+  summarize(count = n())
+#clean up the names for table
+sex1 <- sex %>%
+  mutate(
+  gender = recode(
+    gender,
+    "1" = "Male",
+    "2" = "Female"
+  )
+  )
+  
+#make table
+knitr::kable(sex1, caption = "Demographics: Gender", col.names = c("Gender", "Number of Students"))
+```
+
+As the table shows, slightly more students are male than female. 50.6% are male and 49.4% are female.
+
+## Income
+For this study, the income variable is a dummy variable based on which students get lunch for free, and which students pay for lunch at full or reduced price. In relative terms, those who get lunch for free are of a lower income, those who get lunch at a reduced price are middle-income, and those who pay full price are upper-income.
+
+```{r}
+#create a data frame that counts how many students have free lunch, reduced price lunch, or neither
+income <- demog %>%
+  group_by(flunch) %>%
+  summarize(count = n())
+#clean up the names for table
+income1 <- income %>%
+  mutate(
+  flunch = recode(
+    flunch,
+    "1" = "Lower Income",
+    "2" = "Middle Income",
+    "3" = "Higher Income"
+  )
+  )
+  
+#make table
+knitr::kable(income1, caption = "Demographics: Income", col.names = c("Relative Income Type", "Number of Students"))
+```
+
+As the table demonstrates, the vast majority of students (91.2%) are of lower income, getting lunches at school for free. 4% of students get lunch at a reduced price, marking them as middle income, relatively speaking. Only slightly more students pay for lunch at full price (4.8%), meaning that they are of relatively high incomes.
+
+Now, we will look out outcomes for all 500 students.
+
+## Test Scores
+```{r}
+#make a histogram showing test distribution
+ggplot(data= outcomes, mapping = aes(x = testscore)) +
+  geom_histogram() +
+  labs(title = "Total Test Score Distribution", x = "Scores", y = "Number of Students")
+```
+
+The distribution shows that most of the students failed the ninth grade test, with most scoring between 40/100 and 60/100 and few scoring above an 80/100. The histogram shows a normal distribution.
+
+## On Track
+```{r}
+#make a bar graph to compare the number of students on track to graduate to the number of students off track
+outcomes %>%
+  #clean up names
+  mutate(
+    dontrack9 = recode(
+      dOnTrack9,
+      "1" = "Yes",
+      "0" = "No" 
+    )
+  ) %>%
+  count(dontrack9) %>%
+  #create bar graph
+  ggplot(mapping = aes(x = dontrack9, y = n)) +
+  geom_col() +
+  labs(title = "Were the Ninth Graders On Track to Graduate?", y = "Number of Students") +
+  theme(axis.title.x = element_blank())
+```
+
+According to the bar graph, most of the ninth graders were on track to graduate. Nearly 80% of all freshmen were on track to graduate.
+
+## But Did They?
+To determine whether these freshmen graduated within four years, we'll make a similar chart for the variable representing whether or not students graduated within four years:
+```{r}
+#make a bar graph to compare the number of students that graduated to the number of students that didn't
+outcomes %>%
+  #clean up names
+  mutate(
+    regdip4yr = recode(
+      regdip4YR,
+      "1" = "Yes",
+      "0" = "No" 
+    )
+  ) %>%
+  count(regdip4yr) %>%
+  #create bar graph
+  ggplot(mapping = aes(x = regdip4yr, y = n)) +
+  geom_col() +
+  labs(title = "Did They Receive a Regular Diploma within Four Years?", y = "Number of Students") +
+  theme(axis.title.x = element_blank())
+```
+
+The new graph shows that not all the students that were on track to graduate on time did so. Almost 200/500 of the students failed to get their diploma within four years, even though only slightly more than 100/500 weren't on track to graduate.
+
+# 2. Merge the two datasets together. Provide tables or figures showing differences and similarities in outcomes by demographics and write a paragraph or two describing these differences.
+```{r}
+#merge the datasets
+educ <- inner_join(x = outcomes, y = demog)
+```
+
+For this section, I will remake the figures of section 1, controlling for race, gender, and income type.
+
+## Race
+```{r}
+#recode variables to make them more presentable for graphs
+educrace <- educ %>%
+  mutate(
+    racecat = recode(
+      racecat,
+      "1" = "White",
+      "2" = "African American",
+      "3" = "Native American/Alaskan Native",
+      "4" = "Asian/Pacific Islander",
+      "5" = "Latino" 
+    ),
+    dOnTrack9 = recode(
+      dOnTrack9,
+      "1" = "Yes",
+      "0" = "No" 
+    ),
+    regdip4YR = recode(
+      regdip4YR,
+      "1" = "Yes",
+      "0" = "No"
+    )
+  )
+```
+
+### Test Scores
+```{r}
+#create a histogram sorted by race
+educrace %>%
+  ggplot(mapping = aes(x = testscore, color = racecat)) +
+  geom_histogram() +
+  facet_wrap(~racecat) +
+  labs(title = "Test Score Distribution", subtitle = "By Race/Ethnicity", x = "Scores", y = "Number of Students") +
+  theme(legend.position = "none")
+```
+
+As you can see, there is very little data for white and Asian students. The distribution of scores for white students is fairly even, while the Asian students scored between 60 and 75. The African American Students, which make up the brunt of the study population, maintain the shape of the original distribution, right down to the highest and lowest score. Latino students demonstrate a similar trend, with most scoring between 40% and 60%.
+
+### On Track
+```{r}
+#create a stacked bar graph for on track variable
+educrace %>%
+  group_by(racecat, dOnTrack9) %>%
+  count(id) %>%
+  ggplot(mapping = aes(x = dOnTrack9, fill = racecat, y = n)) +
+  geom_col(position = "fill") +
+  labs(title = "Were the Ninth Graders On Track to Graduate?", subtitle = "By Race/Ethnicity", y = "Number of Students") +
+  theme(axis.title.x = element_blank()) +
+  theme(legend.title = element_blank())
+```
+
+The stacked bar graph allows us to compare the differences in being on track by race. More African American students were not on track to graduate, and this is the only racial category that fits that trend. All of the Asian/Pacific Islander students were on track to graduate, as well as most of the Latino students and most of the white students.
+
+### But Did They?
+```{r}
+#create a stacked bar graph for graduation variable
+educrace %>%
+  group_by(racecat, regdip4YR) %>%
+  count(id) %>%
+  ggplot(mapping = aes(x = regdip4YR, fill = racecat, y = n)) +
+  geom_col(position = "fill") +
+  labs(title = "Did They Receive a Regular Diploma within Four Years?", subtitle = "By Race/Ethnicity", y = "Number of Students") +
+  theme(axis.title.x = element_blank()) +
+  theme(legend.title = element_blank())
+```
+
+The trend repeats itself. More African Americans failed to graduate within four years, while all of the Asian students and most of the Latino and white students did graduate within four years. However, it seems as though some of the white students who were on track to graduate failed to do so. To better understand, we need to see the regular bar graphs:
+
+```{r}
+#see regular bar graphs, controlling for race
+
+educrace %>%
+  group_by(racecat, dOnTrack9) %>%
+  count(id) %>%
+  ggplot(mapping = aes(x = dOnTrack9, fill = racecat, y = n)) +
+  geom_col() +
+  labs(title = "Were the Ninth Graders On Track to Graduate?", subtitle = "By Race/Ethnicity", y = "Number of Students") +
+  theme(axis.title.x = element_blank()) +
+  theme(legend.title = element_blank())
+
+educrace %>%
+  group_by(racecat, regdip4YR) %>%
+  count(id) %>%
+  ggplot(mapping = aes(x = regdip4YR, fill = racecat, y = n)) +
+  geom_col() +
+  labs(title = "Did They Receive a Regular Diploma within Four Years?", subtitle = "By Race/Ethnicity", y = "Number of Students") +
+  theme(axis.title.x = element_blank()) +
+  theme(legend.title = element_blank())
+```
+
+According to the graphs, it seems that some of the white students who were on track to graduate failed to do so. Some African American students who were on track to graduate also failed to do so. 
+
+## Gender
+```{r}
+#recode variables to make them more presentable for graphs
+edugen <- educ %>%
+  mutate(
+    gender = recode(
+      gender,
+      "1" = "Male",
+      "2" = "Female"
+    ),
+    dOnTrack9 = recode(
+      dOnTrack9,
+      "1" = "Yes",
+      "0" = "No" 
+    ),
+    regdip4YR = recode(
+      regdip4YR,
+      "1" = "Yes",
+      "0" = "No"
+    )
+  )
+```
+
+### Test Scores
+```{r}
+#create a histogram sorted by gender
+edugen %>%
+  ggplot(mapping = aes(x = testscore, color = gender)) +
+  geom_histogram() +
+  facet_wrap(~gender) +
+  labs(title = "Test Score Distribution", subtitle = "By Gender", x = "Scores", y = "Number of Students") +
+  theme(legend.position = "none")
+```
+
+According to the histograms, female students scored slightly higher on average than male students. The scores of the male students had a wider range, encompassing both the lowest and the highest scores.
+
+### On Track
+```{r}
+#create a stacked bar graph for on track variable
+edugen %>%
+  group_by(gender, dOnTrack9) %>%
+  count(id) %>%
+  ggplot(mapping = aes(x = dOnTrack9, fill = gender, y = n)) +
+  geom_col(position = "fill") +
+  labs(title = "Were the Ninth Graders On Track to Graduate?", subtitle = "By Gender", y = "Number of Students") +
+  theme(axis.title.x = element_blank()) +
+  theme(legend.title = element_blank())
+```
+
+The stacked bar chart shows that most the students who were not on track to graduate were male, and most of the students who were on track to graduate were female.
+
+### But Did They?
+```{r}
+#create a stacked bar graph for graduation variable
+edugen %>%
+  group_by(gender, regdip4YR) %>%
+  count(id) %>%
+  ggplot(mapping = aes(x = regdip4YR, fill = gender, y = n)) +
+  geom_col(position = "fill") +
+  labs(title = "Did They Receive a Regular Diploma within Four Years?", subtitle = "By Gender", y = "Number of Students") +
+  theme(axis.title.x = element_blank()) +
+  theme(legend.title = element_blank())
+```
+
+It seems like a larger percentage of students who did not receive a diploma in four years was female compared to the percentage of students who were not on track to graduate. To better understand this, we look at the regular graphs:
+
+```{r}
+#see regular bar graphs, controlling for gender
+
+edugen %>%
+  group_by(gender, dOnTrack9) %>%
+  count(id) %>%
+  ggplot(mapping = aes(x = dOnTrack9, fill = gender, y = n)) +
+  geom_col() +
+  labs(title = "Were the Ninth Graders On Track to Graduate?", subtitle = "By Gender", y = "Number of Students") +
+  theme(axis.title.x = element_blank()) +
+  theme(legend.title = element_blank())
+
+edugen %>%
+  group_by(gender, regdip4YR) %>%
+  count(id) %>%
+  ggplot(mapping = aes(x = regdip4YR, fill = gender, y = n)) +
+  geom_col() +
+  labs(title = "Did They Receive a Regular Diploma within Four Years?", subtitle = "By Gender", y = "Number of Students") +
+  theme(axis.title.x = element_blank()) +
+  theme(legend.title = element_blank())
+```
+
+According to the regular graphs, both male and female students were more likely to graduate than not, although a greater portion of the students not on track to graduate were male. Both male and female students who were on track to graduate failed to do so in four years, and it seems like a few more female students met this trend than male students.
+
+## Income
+```{r}
+#recode variables to make them more presentable for graphs
+eduinc <- educ %>%
+  mutate(
+    flunch = recode(
+      flunch,
+      "1" = "Lower Income",
+      "2" = "Middle Income",
+      "3" = "Higher Income"
+    ),
+    dOnTrack9 = recode(
+      dOnTrack9,
+      "1" = "Yes",
+      "0" = "No" 
+    ),
+    regdip4YR = recode(
+      regdip4YR,
+      "1" = "Yes",
+      "0" = "No"
+    )
+  )
+```
+
+### Test Scores
+```{r}
+#create a histogram sorted by income
+eduinc %>%
+  ggplot(mapping = aes(x = testscore, color = flunch)) +
+  geom_histogram() +
+  facet_wrap(~flunch) +
+  labs(title = "Test Score Distribution", subtitle = "By Income Type", x = "Scores", y = "Number of Students") +
+  theme(legend.position = "none")
+```
+
+Most of the students are of lower income (in that they pay for lunch for free), and this is reflected by the fact that the histogram of lower-income students' scores resembles that of the general test distribution. Interestingly, higher-income students (who do not get lunch for free or at a reduced price) were more likely than not to have failed the test. Middle-income students (that get lunch at a reduced price) did the best overall, with approximately 50% scoring a 60/100 or higher.
+
+### On Track
+```{r}
+#create a stacked bar graph for on track variable
+eduinc %>%
+  group_by(flunch, dOnTrack9) %>%
+  count(id) %>%
+  ggplot(mapping = aes(x = dOnTrack9, fill = flunch, y = n)) +
+  geom_col(position = "fill") +
+  labs(title = "Were the Ninth Graders On Track to Graduate?", subtitle = "By Income Type", y = "Number of Students") +
+  theme(axis.title.x = element_blank()) +
+  theme(legend.title = element_blank())
+```
+
+It seems that a slightly higher percentage of those who were off track to graduate were of higher income, while a slightly higher percentage of those who were on track to graduate were of middle income.
+
+### But Did They?
+```{r}
+#create a stacked bar graph for graduation variable
+eduinc %>%
+  group_by(flunch, regdip4YR) %>%
+  count(id) %>%
+  ggplot(mapping = aes(x = regdip4YR, fill = flunch, y = n)) +
+  geom_col(position = "fill") +
+  labs(title = "Did They Receive a Regular Diploma within Four Years?", subtitle = "By Income Type", y = "Number of Students") +
+  theme(axis.title.x = element_blank()) +
+  theme(legend.title = element_blank())
+```
+
+According to the stacked bar graph, a slighly higher percentage of students that graduated were middle-income (in comparison to the percentage of students that were on track).
+
+```{r}
+#see regular bar graphs, controlling for income
+
+eduinc %>%
+  group_by(flunch, dOnTrack9) %>%
+  count(id) %>%
+  ggplot(mapping = aes(x = dOnTrack9, fill = flunch, y = n)) +
+  geom_col() +
+  labs(title = "Were the Ninth Graders On Track to Graduate?", subtitle = "By Income Type", y = "Number of Students") +
+  theme(axis.title.x = element_blank()) +
+  theme(legend.title = element_blank())
+
+eduinc %>%
+  group_by(flunch, regdip4YR) %>%
+  count(id) %>%
+  ggplot(mapping = aes(x = regdip4YR, fill = flunch, y = n)) +
+  geom_col() +
+  labs(title = "Did They Receive a Regular Diploma within Four Years?", subtitle = "By Income Type", y = "Number of Students") +
+  theme(axis.title.x = element_blank()) +
+  theme(legend.title = element_blank())
+```
+
+Next to no middle-income students were off track. Almost all of the students who were off track were of a lower-income. However, upon looking to see which students graduated within four years, it is revealed that a couple of middle-income students who were on track failed to graduate on time. Also, some of the higher-income students who were on track also failed to graduate. A lot more lower-income students who were on track to graduate failed to do so on time. 
+
+# 3. Run an analysis that examines which is more predictive of high school graduation, test scores or freshman ontrack. Also, run the analysis controlling for demographics. Provide tables with your analysis and explain your answer and methodology.
+
+**Methodology:** First, I created regression models to view the regression tables for freshman ontrack and test scores. I will use a logistic (glm) model for freshman ontrack since it is a binary variable, and a linear (lm) model for test scores since that is a continuous variable. I will also illustrate these models with scatterplot graphs, where the strength and nature of the correlation can be determined by the slope of the predictive line, and the margin of error is indicated by the shading.
+
+```{r}
+#make sure all the vars are numeric to make them conducive for regressions
+educreg <- educ %>%
+  mutate(racecat = as.numeric(racecat),
+         gender = as.numeric(gender),
+         flunch = as.numeric(flunch),
+         testscore = as.numeric(testscore),
+         dOnTrack9 = as.numeric(dOnTrack9),
+         regdip4YR = as.numeric(regdip4YR),
+         )
+```
+
+## Freshman OnTrack and Graduation
+Because dOnTrack9 is a binary variable, I used a logistic regression model to calculate the relationship between freshman ontrack and graduation. 
+
+```{r}
+#generate regression model
+educreg1 <- glm(regdip4YR ~ dOnTrack9 + racecat + gender + flunch, data = educreg)
+
+#tidy
+tidy(educreg1)
+
+#clean up names for regression table
+educreg11 <- tidy(educreg1, conf.int = TRUE) %>%
+  mutate(
+    term = recode(
+      term,
+      dOnTrack9 = "On Track",
+      racecat = "Race/Ethnicity",
+      gender = "Gender",
+      flunch= "Income Type")
+  )
+
+#make regression table
+knitr::kable(educreg11, col.names = c("Term", "Estimate", "Standard Error",
+                                      "Statistic", "P Value", "Min Confidence Level", "Max Confidence Level"))
+```
+
+The regression table shows a moderate positive correlation between On Trackedness and Graduation. The estimate also has a small standard error and is statistically significant.
+
+```{r}
+#make a graph displaying GLM model
+ggplot(data=educreg, mapping = aes(x = dOnTrack9, y = regdip4YR)) +
+  geom_point(alpha = 0.1) +
+  geom_smooth(method = "glm") +
+  labs(title = "Relationship between Being On Track to Graduate and Actually Graduating", x = "On Track to Graduate", y = "Probability of Graduating")
+```
+
+The graph shows a positive correlation between the two variables, making On Trackedness a good predictor of Graduation.
+
+### Race and Ethnicity
+
+```{r}
+#make a graph displaying GLM model controlling for race
+educreg %>%
+  #clean up names for facet wrap
+  mutate(
+  racecat = recode(
+    racecat,
+    "1" = "White",
+    "2" = "African American",
+    "3" = "Native American/Alaskan Native",
+    "4" = "Asian/Pacfic Islander",
+    "5" = "Latino"
+  )
+  )%>%
+  ggplot(mapping = aes(x = dOnTrack9, y = regdip4YR)) +
+  geom_point(alpha = 0.1) +
+  geom_smooth(method = "glm") +
+  labs(title = "Relationship between Being On Track to Graduate and Actually Graduating", subtitle = "By Race/Ethnicity", x = "On Track to Graduate", y = "Probability of Graduating") +
+  facet_wrap(~racecat)
+```
+
+Due to the lack of data for students, it is hard to make out a trend. However, the other racial/ethnic categories show a positive correlation, although the plot for white students has a very wide standard error.
+
+### Gender
+
+```{r}
+#make a graph displaying GLM model controlling for gender
+educreg %>%
+  #clean up names for facet wrap
+  mutate(
+  gender = recode(
+    gender,
+    "1" = "Male",
+    "2" = "Female"
+  )
+  )%>%
+  ggplot(mapping = aes(x = dOnTrack9, y = regdip4YR)) +
+  geom_point(alpha = 0.1) +
+  geom_smooth(method = "glm") +
+  labs(title = "Relationship between Being On Track to Graduate and Actually Graduating", subtitle = "By Gender", x = "On Track to Graduate", y = "Probability of Graduating") +
+  facet_wrap(~gender)
+```
+
+Both genders are demonstrating relatively the same trend, though female students have a slightly wider standard error. 
+
+### Income Type
+
+```{r}
+#make a graph displaying GLM model controlling for income
+educreg %>%
+  #clean up names for facet wrap
+  mutate(
+  flunch = recode(
+      flunch,
+      "1" = "Lower Income",
+      "2" = "Middle Income",
+      "3" = "Higher Income"
+  )
+  )%>%
+  ggplot(mapping = aes(x = dOnTrack9, y = regdip4YR)) +
+  geom_point(alpha = 0.1) +
+  geom_smooth(method = "glm") +
+  labs(title = "Relationship between Being On Track to Graduate and Actually Graduating", subtitle = "By Income Type", x = "On Track to Graduate", y = "Probability of Graduating") +
+  facet_wrap(~flunch)
+```
+
+The students who pay for lunch at full price show the strongest positive correlation between freshman ontrack and graduation. Those who get lunch for free also show a relatively strong positive correlation, and with a smaller standard error (likely because of the larger sample size). Those who get lunch at a reduced price, however, actually show a negative correlation (with the largest standard error).
+
+## Test Scores and Graduation
+Because testscore is a continuous variable, I used a lienar regression model to calculate the relationship between test scores and graduation.
+
+```{r}
+#generate regression model
+educreg2 <- lm(regdip4YR ~ testscore + racecat +gender + flunch, data = educreg)
+
+#tidy 
+tidy(educreg2)
+
+#clean up names for regression table
+educreg22 <- tidy(educreg2, conf.int = TRUE) %>%
+  mutate(
+    term = recode(
+      term,
+      testscore = "Test Score",
+      racecat = "Race/Ethnicity",
+      gender = "Gender",
+      flunch = "Income"
+    )
+  )
+
+#make regression table
+knitr::kable(educreg22, col.names = c("Term", "Estimate", "Standard Error",
+                                      "Statistic", "P Value", "Min Confidence Level", "Max Confidence Level"))
+```
+
+The table shows that test scores are only slightly correlated. The result is also statistically significant, given that the p value is 0.0002799.
+
+```{r}
+#make a graph displaying linear model
+ggplot(data=educreg, mapping = aes(x = testscore, y = regdip4YR)) +
+  geom_point(alpha = 0.1) +
+  geom_smooth(method = "lm") +
+  labs(title = "Relationship between Ninth Grade Test Scores and Graduating Within Four Years", x = "Test Scores", y = "Probability of Graduating")
+```
+
+While the graph also demonstrates a positive correlation between test scores and graduation, there is a much wider standard error.
+
+### Race and Ethnicity
+
+```{r}
+#make a graph displaying linear model controlling for race
+educreg %>%
+  #clean up names for facet wrap
+  mutate(
+  racecat = recode(
+    racecat,
+    "1" = "White",
+    "2" = "African American",
+    "3" = "Native American/Alaskan Native",
+    "4" = "Asian/Pacfic Islander",
+    "5" = "Latino"
+  )
+  )%>%
+  ggplot(mapping = aes(x = testscore, y = regdip4YR)) +
+  geom_point(alpha = 0.1) +
+  geom_smooth(method = "lm") +
+  labs(title = "Relationship between Ninth Grade Test Scores and Graduating Within Four Years", subtitle = "By Race/Ethnicity", x = "Test Scores", y = "Probability of Graduting") +
+  facet_wrap(~racecat)
+```
+
+While African American and Latino students demonstrate a positive correlation, there is a particular strong correlation between test scores and graduating for white students (although it comes with a large standard of error).
+
+### Gender
+
+```{r}
+#make a graph displaying linear model controlling for gender
+educreg %>%
+  #clean up names for facet wrap
+  mutate(
+  gender = recode(
+    gender,
+    "1" = "Male",
+    "2" = "Female"
+  )
+  )%>%
+  ggplot(mapping = aes(x = testscore, y = regdip4YR)) +
+  geom_point(alpha = 0.1) +
+  geom_smooth(method = "lm") +
+  labs(title = "Relationship between Ninth Grade Test Scores and Graduating Within Four Years", subtitle = "By Gender", x = "Test Scores", y = "Probability of Graduating") +
+  facet_wrap(~gender)
+```
+
+For male students, there is a slightly stronger correlation between test scores and graduation. Male students also have a wider range of error, though.
+
+### Income Type
+
+```{r}
+#make a graph displaying linear model controlling for income
+educreg %>%
+  #clean up names for facet wrap
+  mutate(
+  flunch = recode(
+      flunch,
+      "1" = "Lower Income",
+      "2" = "Middle Income",
+      "3" = "Higher Income"
+  )
+  )%>%
+  ggplot(mapping = aes(x = testscore, y = regdip4YR)) +
+  geom_point(alpha = 0.1) +
+  geom_smooth(method = "lm") +
+  labs(title = "Relationship between Ninth Grade Test Scores and Graduating Within Four Years", subtitle = "By Income Type", x = "Test Scores", y = "Probability of Graduating") +
+  facet_wrap(~flunch)
+```
+
+There is an extremely high correlation between test scores and graduation for students paying full price for lunch. Students in the other two categories also demonstrate positive trends, but not as strongly.
+
+## Results
+**In General:** freshman ontrack is the better predictor
+**By Race/Ethnicity:** freshman ontrack is the better predictor
+**By Gender:** freshman ontrack is the better predictor
+**By Income Type:** test scores are the better predictor
+
+# For this analysis you will need to recode some of the variables. Please provide a description or code book of how you recoded variables in your analysis or share the code you used to do this.
+Before loading the CSV files into R, I cleaned up the flunch variable. Originally, flunch was coded so that:
+- "F" = Free Lunch
+- "R" = Reduced Price Lunch
+- missing values for students who did not get lunch for free or at a reduced price.
+
+I changed the variable so that:
+- 1 = Free Lunch, or Lower Income
+- 2 = Reduced Price Lunch, or Middle Income
+- 3 = Full Price Lunch, or Higher Income
