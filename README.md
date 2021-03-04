@@ -68,6 +68,10 @@ sex1 <- sex %>%
 #make table
 knitr::kable(sex1, caption = "Demographics: Gender", col.names = c("Gender", "Number of Students"))
 ```
+|Gender | Number of Students|
+|:------|------------------:|
+|Male   |                253|
+|Female |                247|
 
 As the table shows, slightly more students are male than female. 50.6% are male and 49.4% are female.
 
@@ -93,6 +97,11 @@ income1 <- income %>%
 #make table
 knitr::kable(income1, caption = "Demographics: Income", col.names = c("Relative Income Type", "Number of Students"))
 ```
+|Relative Income Type | Number of Students|
+|:--------------------|------------------:|
+|Lower Income         |                456|
+|Middle Income        |                 20|
+|Higher Income        |                 24|
 
 As the table demonstrates, the vast majority of students (91.2%) are of lower income, getting lunches at school for free. 4% of students get lunch at a reduced price, marking them as middle income, relatively speaking. Only slightly more students pay for lunch at full price (4.8%), meaning that they are of relatively high incomes.
 
@@ -108,6 +117,8 @@ ggplot(data= outcomes, mapping = aes(x = testscore)) +
 ```
 
 The distribution shows that most of the students failed the ninth grade test, with most scoring between 40/100 and 60/100 and few scoring above an 80/100. The histogram shows a normal distribution.
+
+![image](https://user-images.githubusercontent.com/67283755/109897214-f9cea300-7c57-11eb-85a5-602e847c94ce.png)
 
 ## On Track
 
