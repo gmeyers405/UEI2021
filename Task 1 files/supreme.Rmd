@@ -1,0 +1,225 @@
+---
+author: "Gabrielle Meyers"
+title: "State Trends in the Supreme Court"
+output: github_document
+---
+
+## Introduction
+
+**Research question:** What, if any, trends exist that might explain why the Supreme Court has been more likely to hear cases from certain state supreme courts and not others? Are there any noticeable trends amongst these ten states in comparison to each other and the overall data?
+
+## Setting Up
+
+*Packages needed:* tidyverse, ggplot2
+
+After importing all of my CSV files and combining them together, I created a new dataset that would only keep the 50 states (ie filtering out Puerto Rico, Guam, etc) and filter for cases starting in the 1960 term, which is the first term that we had all 50 states (Hawaii, last to enter the Union, did so in 1959). 
+
+```{r set up, include = FALSE}
+#load packages
+library(tidyverse)
+library(ggplot2)
+
+#load data
+scdbv_mod <- read_csv(here::here("data", "SCDB_2019_01_justiceCentered_Citation.csv"))
+scdbv_leg <- read_csv(here::here("data", "SCDB_Legacy_05_justiceCentered_Citation.csv"))
+scdbv <- bind_rows(scdbv_mod, scdbv_leg)
+
+#upload newly made csvs with relevant labels
+issues <- read_csv("issues - Sheet1.csv")
+states <- read_csv("states - Sheet1.csv")
+
+#combine everything
+scdbv1 <-left_join(x = scdbv, y = issues) 
+scdbv2 <-left_join(x = scdbv1, y = states)
+
+#filter out non-states and only include years in which all 50 states were in the US
+scotus <- scdbv2 %>%
+  filter(caseSourceState != c(3, 10, 11, 14, 24, 40, 44, 46, 54, 60:65)) %>%
+  filter(term >= 1960)
+```
+
+## Table of the Top Ten States
+
+Most of my analysis will be comparing graphs based on data from all 50 states to individual graphs of the ten states that have most frequently been the source of a Supreme Court case since 1960. 
+
+```{r table, echo = FALSE}
+#create data frame for table
+freqtable <- scotus %>%
+  distinct(caseId, State) %>%
+  #count how many times each state has been the source of a case 
+  count(State) %>%
+  drop_na(State) %>%
+  #arrange in descending order to get the top ten states
+  arrange(desc(n))
+#make the table
+knitr::kable(freqtable[1:10, ],caption = "Frequency of Supreme Court Case Sources by State (1960-2020)", col.names = c("State", "Frequency"))
+```
+
+After determining the top ten states, I created a data frame restricted to the ten states. I also created a special factor to reorder the states by frequency as defined in the table rather than by alphabetical order. As for the states themselves, I don't think there's any concrete relation between the states themselves and how many cases reviewed by their state courts have been taken to the Supreme Court. There isn't even proof that the fact that the list includes the three most populous states (New York, California, and Texas) is more than a coincidence. However, there is a wide representation of political leanings- 4 "blue" states (CA, NY, IL, and WA), 4 "red" states (TX, LA, GA, and AL), and 2 swing states (FL and OH).
+
+```{r top ten, include = FALSE}
+#special dataset for the top ten states
+scotus1 <- scotus %>%
+  filter(State == "California"|State == "Florida"|State == "New York"|State == "Illinois"|State == "Texas"|State == "Louisiana"|State == "Ohio"|State == "Georgia"|State == "Alabama"|State == "Washington")
+
+#special factor for the top ten states
+state_levels <- c("California", "Florida", "New York", "Illinois", "Texas", "Louisiana", "Ohio", "Georgia", "Alabama", "Washington")
+
+```
+
+## Declarations of Unconstitutionality
+
+In this section, we will determine if there is any relationship between a case coming from a particular state court and the chance that it will result in the Supreme Court making a declaration of unconstitutionality.
+
+```{r fifty unconstitutional, include = FALSE}
+#create separate data frame that counts how many declarations were made in each term
+unconst <- scotus %>%
+  distinct(term, caseId, declarationUncon) %>%
+  group_by(term) %>%
+  #since declarationUncon ==1 is actually when there isn't a declaration of unconstitutionality, we use 1- mean(declarationUncon == 1)
+  summarize(uncon = 1- mean(declarationUncon == 1), na.rm = TRUE)
+```
+
+```{r fifty unconstitutional pt 2, echo = FALSE}
+#create line graph
+unconst %>%
+  ggplot(mapping = aes(term, uncon)) +
+  geom_line() +
+  labs(title = "Declarations of Unconstitutionality by Term (1960-2020)", x = "Term", y = "Percent of Cases with a Declaration of Unconstitutionality") +
+  #label the y axis with percentages
+  scale_y_continuous(labels = scales::percent)
+```
+
+Declarations of unconstitutionality seem to be relatively uncommon overall, never exceeding 45% as the result of cases in any given term between 1960 and 2000. The shape of the graph indicates that there is no real consistency in how many declarations of unconstitutionality a Supreme Court may give in any given term, as the data seems to alternate between realtive peaks and valleys rather than hold stagnant. The most noticeable peak is in the late 1990s, followed by the most noticeable valley at 2000. It seems that the Supreme Court is more likely to uphold a law than to not.
+
+```{r ten unconstitutional, include = FALSE}
+#create similar data frame, now sorted by state (use the data frame that is restricted to the top ten states)
+unconst1 <- scotus1 %>%
+  distinct(term, caseId, declarationUncon, State) %>%
+  group_by(term, State) %>%
+  summarize(uncons = 1- mean(declarationUncon == 1), na.rm = TRUE)
+```
+
+```{r ten unconstitutional pt 2, echo = FALSE}
+#create a faceted line graph of the top ten states
+unconst1 %>%
+  ggplot(mapping = aes(term, uncons, color = factor(State, levels = state_levels))) +
+  geom_line() +
+  #use factor to order the states appropriately
+  facet_wrap(~factor(State, levels = state_levels)) +
+  labs(title = "Declarations of Unconstitutionality by Term (1960-2020)", x = "Term", y = "Percent of Cases with a Declaration of Unconstitutionality") +
+  scale_y_continuous(labels = scales::percent) +
+  theme(legend.position = "none")
+```
+
+The distributions by state are widely different from the overall graph. None of the states follow the trend of peaks followed by valleys, and all of them have exceeded 50% of cases in a term being declared unconstitutional. There do not seem to be any concrete trends in the states. However, between the years 2000 and 2020, it seems as though Alabama is just as likely to have a case result in a declaration of unconstitutionality as New York. Alabama was also as likely to have a case result in a declaration of unconstitutionality as Louisiana around 1980. 
+
+Overall, there is no real relationship between declarations of unconstitutionality and state. It should also be noted that no cases have resulted in a declaration of unconstitutionality in recent years with the exception of Texas, implying that other states might be more to have their state courts pass up cases to the Supreme Court that result in a declaration of unconstitutionality.
+
+## Decision Direction
+
+Another factor I decided to analyze was the direction in which cases went. I am curious to see how (or if) the political leanings of each state (California liberal, Alabama conservative) will play a role in these results. To start, I recalled a graph we made in HW03, which determined what percentage of cases in each term resulted in a conservative victory:
+
+```{r fifty conservative, include = FALSE}
+#recode decisionDirection so that conservative decisions = 1 and liberal decisions = 0
+scotus$decisiondirection <- plyr::mapvalues(scotus$decisionDirection, from = c(1, 2), to = c(1, 0))
+
+#create data frame that takes into account the percent of cases that went in the conservative direction
+conservative <- scotus %>%
+  distinct(term, caseId, decisiondirection) %>%
+  group_by(term) %>%
+  summarize(ratio = mean(decisiondirection == 1, na.rm = TRUE))
+```
+
+```{r fifty conservative pt 2, echo = FALSE}
+#create line plot reflecting the percent of cases that resulted in conservative wins
+conservative %>%
+  ggplot(mapping = aes(term, ratio)) +
+  geom_line() +
+  labs(title = "Conservative Wins by Term (1960-2020)", x = "Term", y = "Percent of Cases with Conservative Decisions") +
+  scale_y_continuous(labels = scales::percent)
+```
+
+Even though the Court has gotten more conservative in recent years, the percentage of cases that have resulted in conservative wins seems to have decreased overall. From 1980 forward there had been peaks followed by valleys, but cases going into the 2010s have dipped below 40% and then below 30%. According to the graph, conservatives haven't faced such a drop since the 1960s. 
+
+```{r ten conservative, include = FALSE}
+#recode decisionDirection for the dataset restricted to the top ten states
+scotus1$decisiondirection <- plyr::mapvalues(scotus1$decisionDirection, from = c(1, 2), to = c(1, 0))
+
+#create similar data frame
+conservative1 <- scotus1 %>%
+  distinct(term, caseId, decisiondirection, State) %>%
+  group_by(term, State) %>%
+  summarize(ratios = mean(decisiondirection == 1), na.rm = TRUE)
+```
+
+```{r ten conservative pt 2, echo = FALSE}
+#create faceted line plot
+conservative1 %>%
+  ggplot(mapping = aes(term, ratios, color = factor(State, levels = state_levels))) +
+  geom_line() +
+  facet_wrap(~factor(State, levels = state_levels)) +
+  labs(title = "Conservative Wins by Term (1960-2020)", x = "Term", y = "Percent of Cases with a Conservative Decisions") +
+  scale_y_continuous(labels = scales::percent) +
+  #legend unnecessary and cluttering up the graph, so I got rid of it
+  theme(legend.position = "none")
+
+```
+
+All the states (with the execptions of New York and Ohio, which seem to not have had cases in the Supreme Court in the last few years) also portray the drop in conservative victories in the mid to late 2010s. However, this drop might have to do with the fact that the data does not cover cases from the most recent term. About half of the states face the dip in the 1960s, with New York, Florida, Texas, Louisiana, and Ohio all showing upticks in conservative victories in the 1960s. Oddly enough, liberal victories seem more likely to occur in cases sourced from conservative states like Alabama, Louisiana, and Texas (with the exception of Washington), while conservative victories seem most likely to occur overall in typically liberal states like California and New York. This could be because conservative laws from conservative states are too far to the right for the Supreme Court, resulting in liberal victories, and vice versa in the liberal states. 
+
+## Issue Area
+
+The last variable I wanted to look at was issue area, because I wanted to see if some states had a tendency to turn up cases in a particular issue area (for example, perhaps, Alabama and Civil Rights).
+
+```{r fifty issue, include = FALSE}
+#create data frame that appropriately focuses on cases by issue area
+scotissues <- scotus %>%
+  distinct(IssueArea, caseId, State) %>%
+  count(IssueArea) %>%
+  drop_na(IssueArea)
+
+```
+
+```{r fifty issue pt 2, echo = FALSE}
+#create bar graph, using fill = Issue Area to associate colors with particular issues in the faceted graph
+ggplot(data = scotissues, mapping = aes(x = IssueArea, y = n, fill = IssueArea)) +
+  geom_col() +
+  labs(title = "Supreme Court Cases by Issue (1960-2020)", x = "Issue Area", y = "Number of Cases"
+) +
+  #x axis labels unnecessary with legend and unable to fit on the graph, so I got rid of them
+  theme(axis.text.x= element_blank())
+```
+
+According to the bar graph, a vast plurality of cases seem to relate to issues concerning criminal procedure, with civil rights coming in a far second and the First Amendment a close third. Cases concerning attorneys, federal taxation, interstate relations, privacy, and unions are all very rare.
+
+```{r ten issue, include = FALSE}
+#create data frame with data restricted to the top ten states
+scotissues1 <- scotus1 %>%
+  distinct(IssueArea, caseId, State) %>%
+  drop_na(IssueArea) %>%
+  group_by(IssueArea, State) %>%
+  summarize(n = n())
+```
+
+```{r ten issue pt 2, echo = FALSE}
+#create faceted bar graph
+ggplot(data = scotissues1, mapping = aes(x = IssueArea, y = n, fill = IssueArea)) +
+  geom_col() +
+  facet_wrap(~factor(State, levels = state_levels)) +
+  labs(title = "Supreme Court Cases by Issue (1960-2020)", x = "Issue Area", y = "Number of Cases"
+  ) +
+  #x axis labels unnecessary with legend and unable to fit on the graph, so I got rid of them
+  theme(axis.text.x= element_blank())
+```
+
+In every state, criminal procedure cases seem to make up the plurality of the cases sourced to the Supreme Court. The only exception seems to be Washington, whose criminal procedure cases are roughly equal with its civil rights cases. In terms of second place, that seems to vary by state. In California, Louisiana, Georgia, and Alabama, civil rights seems to be the second most prevelant issue. In New York, Illinois, and Ohio, the second most prevalent issue is the First Amendment, especially in New York. Like with the first graph, cases concerning attorneys, federal taxation, interstate relations, privacy, and unions are rare or even nonexistent in the last 50-60 years.
+
+## Conclusions
+There do not seem to be any definitive indicators for a state court case becoming a Supreme Court case. While the individual states seem to emulate major trends displayed in the graph representing all 50 states (such as the recent dip in conservative wins and the tendency to focus on criminal procedure cases), there are no consistent trends that can be used to definitively point to a relationship between states and the cases sourced from their state courts to the Supreme Court. 
+
+## Session Info
+
+```{r}
+devtools::session_info()
+```
