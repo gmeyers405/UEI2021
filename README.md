@@ -39,6 +39,12 @@ race1 <- race %>%
 #make table
 knitr::kable(race1, caption = "Demographics: Race and Ethnicity", col.names = c("Race/Ethnicity", "Number of Students"))
 ```
+|Race/Ethnicity        | Number of Students|
+|:---------------------|------------------:|
+|White                 |                 15|
+|African American      |                394|
+|Asian/Pacfic Islander |                  4|
+|Latino                |                 87|
 
 Most of the students in this study (78.8%) are African American. 17.4% are Latino, 3% are white, and 0.8% are Asian/Pacific Islander. Thus, the overwhelming majority of these students are people of color.
 
