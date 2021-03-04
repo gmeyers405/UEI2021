@@ -12,7 +12,7 @@ output:
 library(tidyverse)
 library(broom)
 #set working directory
-setwd("~/R/UEI2021")
+setwd("~/R/UEI2021/UEI2021")
 #load data
 outcomes <- read_csv("FOTtask.csv")
 demog <- read_csv("DEMOGtask - DEMOGtask.csv")
@@ -22,6 +22,7 @@ demog <- read_csv("DEMOGtask - DEMOGtask.csv")
 
 ## Race and Ethnicity
 Note: Although I have written code for all 5 racial/ethnic categories, upon looking closely at the data, I found that none of the students are Native American or Alaskan Native.
+
 ```{r}
 #create a data frame that counts how many students are of each race/ethnic category
 race <- demog %>%
@@ -47,6 +48,7 @@ knitr::kable(race1, caption = "Demographics: Race and Ethnicity", col.names = c(
 Most of the students in this study (78.8%) are African American. 17.4% are Latino, 3% are white, and 0.8% are Asian/Pacific Islander. Thus, the overwhelming majority of these students are people of color.
 
 ## Gender
+
 ```{r}
 #create a data frame that counts how many students are boys and how many are girls
 sex <- demog %>%
@@ -96,6 +98,7 @@ As the table demonstrates, the vast majority of students (91.2%) are of lower in
 Now, we will look out outcomes for all 500 students.
 
 ## Test Scores
+
 ```{r}
 #make a histogram showing test distribution
 ggplot(data= outcomes, mapping = aes(x = testscore)) +
@@ -106,6 +109,7 @@ ggplot(data= outcomes, mapping = aes(x = testscore)) +
 The distribution shows that most of the students failed the ninth grade test, with most scoring between 40/100 and 60/100 and few scoring above an 80/100. The histogram shows a normal distribution.
 
 ## On Track
+
 ```{r}
 #make a bar graph to compare the number of students on track to graduate to the number of students off track
 outcomes %>%
@@ -129,6 +133,7 @@ According to the bar graph, most of the ninth graders were on track to graduate.
 
 ## But Did They?
 To determine whether these freshmen graduated within four years, we'll make a similar chart for the variable representing whether or not students graduated within four years:
+
 ```{r}
 #make a bar graph to compare the number of students that graduated to the number of students that didn't
 outcomes %>%
@@ -151,6 +156,7 @@ outcomes %>%
 The new graph shows that not all the students that were on track to graduate on time did so. Almost 200/500 of the students failed to get their diploma within four years, even though only slightly more than 100/500 weren't on track to graduate.
 
 # 2. Merge the two datasets together. Provide tables or figures showing differences and similarities in outcomes by demographics and write a paragraph or two describing these differences.
+
 ```{r}
 #merge the datasets
 educ <- inner_join(x = outcomes, y = demog)
@@ -159,6 +165,7 @@ educ <- inner_join(x = outcomes, y = demog)
 For this section, I will remake the figures of section 1, controlling for race, gender, and income type.
 
 ## Race
+
 ```{r}
 #recode variables to make them more presentable for graphs
 educrace <- educ %>%
@@ -185,6 +192,7 @@ educrace <- educ %>%
 ```
 
 ### Test Scores
+
 ```{r}
 #create a histogram sorted by race
 educrace %>%
@@ -198,6 +206,7 @@ educrace %>%
 As you can see, there is very little data for white and Asian students. The distribution of scores for white students is fairly even, while the Asian students scored between 60 and 75. The African American Students, which make up the brunt of the study population, maintain the shape of the original distribution, right down to the highest and lowest score. Latino students demonstrate a similar trend, with most scoring between 40% and 60%.
 
 ### On Track
+
 ```{r}
 #create a stacked bar graph for on track variable
 educrace %>%
@@ -213,6 +222,7 @@ educrace %>%
 The stacked bar graph allows us to compare the differences in being on track by race. More African American students were not on track to graduate, and this is the only racial category that fits that trend. All of the Asian/Pacific Islander students were on track to graduate, as well as most of the Latino students and most of the white students.
 
 ### But Did They?
+
 ```{r}
 #create a stacked bar graph for graduation variable
 educrace %>%
@@ -252,6 +262,7 @@ educrace %>%
 According to the graphs, it seems that some of the white students who were on track to graduate failed to do so. Some African American students who were on track to graduate also failed to do so. 
 
 ## Gender
+
 ```{r}
 #recode variables to make them more presentable for graphs
 edugen <- educ %>%
@@ -275,6 +286,7 @@ edugen <- educ %>%
 ```
 
 ### Test Scores
+
 ```{r}
 #create a histogram sorted by gender
 edugen %>%
@@ -288,6 +300,7 @@ edugen %>%
 According to the histograms, female students scored slightly higher on average than male students. The scores of the male students had a wider range, encompassing both the lowest and the highest scores.
 
 ### On Track
+
 ```{r}
 #create a stacked bar graph for on track variable
 edugen %>%
@@ -303,6 +316,7 @@ edugen %>%
 The stacked bar chart shows that most the students who were not on track to graduate were male, and most of the students who were on track to graduate were female.
 
 ### But Did They?
+
 ```{r}
 #create a stacked bar graph for graduation variable
 edugen %>%
@@ -342,6 +356,7 @@ edugen %>%
 According to the regular graphs, both male and female students were more likely to graduate than not, although a greater portion of the students not on track to graduate were male. Both male and female students who were on track to graduate failed to do so in four years, and it seems like a few more female students met this trend than male students.
 
 ## Income
+
 ```{r}
 #recode variables to make them more presentable for graphs
 eduinc <- educ %>%
@@ -366,6 +381,7 @@ eduinc <- educ %>%
 ```
 
 ### Test Scores
+
 ```{r}
 #create a histogram sorted by income
 eduinc %>%
@@ -379,6 +395,7 @@ eduinc %>%
 Most of the students are of lower income (in that they pay for lunch for free), and this is reflected by the fact that the histogram of lower-income students' scores resembles that of the general test distribution. Interestingly, higher-income students (who do not get lunch for free or at a reduced price) were more likely than not to have failed the test. Middle-income students (that get lunch at a reduced price) did the best overall, with approximately 50% scoring a 60/100 or higher.
 
 ### On Track
+
 ```{r}
 #create a stacked bar graph for on track variable
 eduinc %>%
@@ -394,6 +411,7 @@ eduinc %>%
 It seems that a slightly higher percentage of those who were off track to graduate were of higher income, while a slightly higher percentage of those who were on track to graduate were of middle income.
 
 ### But Did They?
+
 ```{r}
 #create a stacked bar graph for graduation variable
 eduinc %>%
